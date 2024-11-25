@@ -24,7 +24,7 @@ st.title("Lector de Manga")
 st.sidebar.subheader("¡Obtén descripciones detalladas de tu manga!")
 
 # Ingresar API Key
-ke = st.text_input('Ingresa tu Clave API')
+ke = st.text_input('Ingresa tu Clave API', type="password")
 if ke:
     openai.api_key = ke
 
@@ -47,23 +47,27 @@ if st.button("Analizar la imagen"):
         st.error("Por favor sube una imagen.")
     else:
         with st.spinner("Analizando la imagen..."):
-            # Leer la imagen
-            image = Image.open(uploaded_file)
-            buffered = io.BytesIO()
-            image.save(buffered, format="JPEG")
-            img_str = base64.b64encode(buffered.getvalue()).decode()
-
-            # Crear el prompt de la solicitud
-            prompt = (
-                "Eres un lector experto de manga. Describe en español lo que ves en la imagen de forma detallada. "
-                "Incluye los diálogos en un formato de guion y analiza cada panel como si fueras un narrador de manga."
-                "El formato de guion sera dando de ejemplo (Panel 1 , el personaje juan ve a pablo molesto y dice -mal-)."
-            )
-            if show_details and additional_details:
-                prompt += f"\n\nDetalles adicionales proporcionados: {additional_details}"
-
-            # Solicitar la descripción a la API de OpenAI
             try:
+                # Leer la imagen y convertirla al formato RGB si es necesario
+                image = Image.open(uploaded_file)
+                if image.mode != "RGB":
+                    image = image.convert("RGB")
+
+                # Guardar la imagen en un buffer como JPEG
+                buffered = io.BytesIO()
+                image.save(buffered, format="JPEG")
+                img_str = base64.b64encode(buffered.getvalue()).decode()
+
+                # Crear el prompt de la solicitud
+                prompt = (
+                    "Eres un lector experto de manga. Describe en español lo que ves en la imagen de forma detallada. "
+                    "Incluye los diálogos en un formato de guion y analiza cada panel como si fueras un narrador de manga. "
+                    "El formato de guion será dando de ejemplo (Panel 1 , el personaje Juan ve a Pablo molesto y dice -mal-)."
+                )
+                if show_details and additional_details:
+                    prompt += f"\n\nDetalles adicionales proporcionados: {additional_details}"
+
+                # Solicitar la descripción a la API de OpenAI
                 response = openai.ChatCompletion.create(
                     model="gpt-4",
                     messages=[
@@ -102,3 +106,4 @@ if st.button("Convertir a Audio"):
         st.markdown(get_binary_file_downloader_html(output_path, file_label="Archivo de audio"), unsafe_allow_html=True)
     else:
         st.error("No hay texto disponible para convertir a audio. Por favor, analiza una imagen primero.")
+
