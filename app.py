@@ -4,10 +4,6 @@ import base64
 from PIL import Image
 from gtts import gTTS
 import openai
-import pytesseract  # Para extraer texto de imágenes
-
-# Configura pytesseract si no está en PATH
-pytesseract.pytesseract.tesseract_cmd = r'TU_RUTA_A_TESSERACT'
 
 # Función para convertir texto a audio
 def text_to_speech(text):
@@ -50,40 +46,29 @@ if st.button("Analizar la imagen"):
         st.error("Por favor sube una imagen.")
     else:
         with st.spinner("Analizando la imagen..."):
-            try:
-                # Guardar la imagen temporalmente
-                img_path = f"temp/{uploaded_file.name}"
-                with open(img_path, "wb") as f:
-                    f.write(uploaded_file.read())
-                
-                # Extraer texto de la imagen usando pytesseract
-                extracted_text = pytesseract.image_to_string(Image.open(img_path), lang="spa")
-                
-                if not extracted_text.strip():
-                    st.error("No se encontró texto en la imagen. Intenta con otra imagen.")
-                else:
-                    # Crear descripción usando GPT
-                    prompt = (
-                        "Eres un lector experto de manga. Describe en español el texto extraído de la imagen "
-                        "de forma detallada. Incluye un análisis sobre cómo se relacionan los diálogos y el contexto. "
-                        "Diálogos en formato de guion, por ejemplo: (Panel 1, Juan ve a Pablo molesto y dice: '¡No me importa!')."
-                        f"\n\nTexto extraído de la imagen: {extracted_text}"
-                    )
-                    if show_details and additional_details:
-                        prompt += f"\n\nDetalles adicionales proporcionados: {additional_details}"
+            # Crear el prompt de la solicitud
+            prompt = (
+                "Eres un lector experto de manga. Describe en español lo que ves en la imagen de forma detallada. "
+                "Incluye los diálogos en un formato de guion y analiza cada panel como si fueras un narrador de manga."
+                "El formato de guion sera dando de ejemplo (Panel 1 , el personaje juan ve a pablo molesto y dice -mal-)."
+            )
+            if show_details and additional_details:
+                prompt += f"\n\nDetalles adicionales proporcionados: {additional_details}"
 
-                    description_response = openai.ChatCompletion.create(
-                        model="gpt-4",
-                        messages=[
-                            {"role": "system", "content": "Eres un asistente experto en análisis de imágenes y narración de paneles de manga."},
-                            {"role": "user", "content": prompt}
-                        ],
-                        max_tokens=500,
-                        temperature=0.7
-                    )
-                    description = description_response['choices'][0]['message']['content']
-                    st.subheader("Descripción Generada:")
-                    st.markdown(description)
+            # Solicitar la descripción a la API de OpenAI
+            try:
+                response = openai.ChatCompletion.create(
+                    model="gpt-4",
+                    messages=[
+                        {"role": "system", "content": "Eres un asistente experto en descripciones de imágenes y análisis de paneles de manga."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_tokens=500,
+                    temperature=0.7
+                )
+                description = response.choices[0].message['content']
+                st.subheader("Descripción Generada:")
+                st.markdown(description)
             except Exception as e:
                 st.error(f"Ocurrió un error: {e}")
 
