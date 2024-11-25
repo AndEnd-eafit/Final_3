@@ -4,6 +4,7 @@ import base64
 from PIL import Image
 from gtts import gTTS
 import openai
+import io
 
 # Función para convertir texto a audio
 def text_to_speech(text):
@@ -46,6 +47,12 @@ if st.button("Analizar la imagen"):
         st.error("Por favor sube una imagen.")
     else:
         with st.spinner("Analizando la imagen..."):
+            # Leer la imagen
+            image = Image.open(uploaded_file)
+            buffered = io.BytesIO()
+            image.save(buffered, format="JPEG")
+            img_str = base64.b64encode(buffered.getvalue()).decode()
+
             # Crear el prompt de la solicitud
             prompt = (
                 "Eres un lector experto de manga. Describe en español lo que ves en la imagen de forma detallada. "
@@ -61,7 +68,8 @@ if st.button("Analizar la imagen"):
                     model="gpt-4",
                     messages=[
                         {"role": "system", "content": "Eres un asistente experto en descripciones de imágenes y análisis de paneles de manga."},
-                        {"role": "user", "content": prompt}
+                        {"role": "user", "content": prompt},
+                        {"role": "user", "content": f"Imagen en base64: {img_str}"}
                     ],
                     max_tokens=500,
                     temperature=0.7
