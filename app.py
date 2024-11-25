@@ -56,8 +56,8 @@ if st.button("Analizar la imagen"):
             # Crear el prompt de la solicitud
             prompt = (
                 "Eres un lector experto de manga. Describe en español lo que ves en la imagen de forma detallada. "
-                "Incluye los diálogos en un formato de guion y analiza cada panel como si fueras un narrador de manga."
-                "El formato de guion sera dando de ejemplo (Panel 1 , el personaje juan ve a pablo molesto y dice -mal-)."
+                "Incluye los diálogos en un formato de guion y analiza cada panel como si fueras un narrador de manga. "
+                "El formato de guion será dando de ejemplo (Panel 1, el personaje Juan ve a Pablo molesto y dice -mal-)."
             )
             if show_details and additional_details:
                 prompt += f"\n\nDetalles adicionales proporcionados: {additional_details}"
@@ -71,10 +71,15 @@ if st.button("Analizar la imagen"):
                         {"role": "user", "content": prompt},
                         {"role": "user", "content": f"Imagen en base64: {img_str}"}
                     ],
-                    max_tokens=500,
+                    max_tokens=1500,  # Limitar tokens de respuesta
                     temperature=0.7
                 )
                 description = response.choices[0].message['content']
+
+                # Limitar la descripción a 5000 caracteres
+                if len(description) > 5000:
+                    description = description[:5000] + "...\n\n[Texto recortado para cumplir con el límite de caracteres]"
+
                 st.subheader("Descripción Generada:")
                 st.markdown(description)
             except Exception as e:
