@@ -4,6 +4,12 @@ import base64
 from PIL import Image
 from gtts import gTTS
 import openai
+import pytesseract
+import cv2
+import numpy as np
+
+# Configuración de Pytesseract
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Cambiar según tu sistema operativo
 
 # Función para convertir texto a audio
 def text_to_speech(text):
@@ -31,7 +37,9 @@ if ke:
 uploaded_file = st.file_uploader("Sube una imagen", type=["jpg", "png", "jpeg"])
 
 if uploaded_file:
-    st.image(uploaded_file, caption=uploaded_file.name, use_column_width=True)
+    # Mostrar imagen subida
+    image = Image.open(uploaded_file)
+    st.image(image, caption=uploaded_file.name, use_column_width=True)
 
 # Ingresar detalles adicionales
 show_details = st.checkbox("Adicionar detalles sobre la imagen", value=False)
@@ -46,16 +54,27 @@ if st.button("Analizar la imagen"):
         st.error("Por favor sube una imagen.")
     else:
         with st.spinner("Analizando la imagen..."):
-            # Crear el prompt de la solicitud
-            prompt = (
-                "Eres un lector experto de manga. Describe en español lo que ves en la imagen de forma detallada. "
-                "Incluye los diálogos en un formato de guion y analiza cada panel como si fueras un narrador de manga."
-            )
-            if show_details and additional_details:
-                prompt += f"\n\nDetalles adicionales proporcionados: {additional_details}"
-
-            # Solicitar la descripción a la API de OpenAI
             try:
+                # Convertir imagen a escala de grises para OCR
+                image_np = np.array(image)
+                gray_image = cv2.cvtColor(image_np, cv2.COLOR_RGB2GRAY)
+
+                # Extraer texto de la imagen con Pytesseract
+                extracted_text = pytesseract.image_to_string(gray_image, lang="spa")
+
+                # Crear el prompt de la solicitud
+                prompt = (
+                    "Eres un lector experto de manga. Describe en español lo que ves en la imagen de forma detallada. "
+                    "Incluye los diálogos en un formato de guion y analiza cada panel como si fueras un narrador de manga. "
+                    "El formato de guion será dando de ejemplo (Panel 1, el personaje Juan ve a Pablo molesto y dice: -mal-)."
+                )
+                if show_details and additional_details:
+                    prompt += f"\n\nDetalles adicionales proporcionados: {additional_details}"
+
+                if extracted_text.strip():
+                    prompt += f"\n\nTexto extraído de la imagen: {extracted_text}"
+
+                # Solicitar la descripción a la API de OpenAI
                 response = openai.ChatCompletion.create(
                     model="gpt-4",
                     messages=[
