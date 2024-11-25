@@ -1,7 +1,7 @@
 import os
 import streamlit as st
 import base64
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 from gtts import gTTS
 import openai
 import io
@@ -31,18 +31,22 @@ if ke:
 uploaded_file = st.file_uploader("Sube una imagen", type=["jpg", "png", "jpeg"])
 
 if uploaded_file:
-    image = Image.open(uploaded_file)
-    st.image(image, caption=uploaded_file.name, use_column_width=True)
+    try:
+        # Intentar abrir la imagen
+        image = Image.open(uploaded_file).convert("RGB")  # Convertir a RGB para evitar errores con otros modos de color
+        st.image(image, caption=uploaded_file.name, use_column_width=True)
 
-    # Leer y codificar la imagen en Base64
-    buffered = io.BytesIO()
-    image.save(buffered, format="JPEG")
-    img_str = base64.b64encode(buffered.getvalue()).decode()
+        # Leer y codificar la imagen en Base64
+        buffered = io.BytesIO()
+        image.save(buffered, format="JPEG")  # Guardar como JPEG en un buffer
+        img_str = base64.b64encode(buffered.getvalue()).decode()
 
-    # Validar tamaño del Base64
-    base64_length = len(img_str)
-    if base64_length > 30000:  # Si la codificación es muy grande, advertir al usuario
-        st.warning(f"La imagen codificada es demasiado grande ({base64_length} caracteres). Esto podría exceder el límite de la API.")
+        # Validar tamaño del Base64
+        base64_length = len(img_str)
+        if base64_length > 30000:  # Si la codificación es muy grande, advertir al usuario
+            st.warning(f"La imagen codificada es demasiado grande ({base64_length} caracteres). Esto podría exceder el límite de la API.")
+    except UnidentifiedImageError:
+        st.error("El archivo subido no es una imagen válida. Por favor, sube un archivo de imagen compatible (JPG, PNG, JPEG).")
 
 # Ingresar detalles adicionales
 show_details = st.checkbox("Adicionar detalles sobre la imagen", value=False)
@@ -113,3 +117,4 @@ if st.button("Convertir a Audio"):
         st.markdown(get_binary_file_downloader_html(output_path, file_label="Archivo de audio"), unsafe_allow_html=True)
     else:
         st.error("No hay texto disponible para convertir a audio. Por favor, analiza una imagen primero.")
+
