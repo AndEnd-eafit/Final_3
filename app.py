@@ -43,7 +43,7 @@ if uploaded_file:
 
         # Validar tamaño del Base64
         base64_length = len(img_str)
-        if base64_length > 30000:  # Límite de 30,000 caracteres
+        if base64_length > 30000:  # Si la codificación es muy grande, advertir al usuario
             st.error(f"La imagen codificada supera el límite de 30,000 caracteres ({base64_length}). Por favor, reduce su resolución o usa otra imagen.")
             img_str = None  # Reiniciar para evitar su envío
     except UnidentifiedImageError:
@@ -94,6 +94,11 @@ if st.button("Analizar la imagen"):
                         temperature=0.7
                     )
                     description = response.choices[0].message['content']
+
+                    # Limitar la descripción a 3000 caracteres
+                    if len(description) > 3000:
+                        description = description[:3000] + "...\n\n[Texto recortado para cumplir con el límite de caracteres]"
+
                     st.subheader("Descripción Generada:")
                     st.markdown(description)
             except Exception as e:
