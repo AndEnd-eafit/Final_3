@@ -4,6 +4,10 @@ import base64
 from PIL import Image
 from gtts import gTTS
 import openai
+import pytesseract  # Para extraer texto de imágenes
+
+# Configura pytesseract si no está en PATH
+pytesseract.pytesseract.tesseract_cmd = r'TU_RUTA_A_TESSERACT'
 
 # Función para convertir texto a audio
 def text_to_speech(text):
@@ -47,45 +51,39 @@ if st.button("Analizar la imagen"):
     else:
         with st.spinner("Analizando la imagen..."):
             try:
-                # Leer la imagen cargada y enviarla como input
+                # Guardar la imagen temporalmente
                 img_path = f"temp/{uploaded_file.name}"
                 with open(img_path, "wb") as f:
                     f.write(uploaded_file.read())
                 
-                # Llamada a la API para análisis de imágenes
-                with open(img_path, "rb") as img:
-                    response = openai.Image.create_variation(
-                        image=img,
-                        n=1,
-                        size="256x256"
+                # Extraer texto de la imagen usando pytesseract
+                extracted_text = pytesseract.image_to_string(Image.open(img_path), lang="spa")
+                
+                if not extracted_text.strip():
+                    st.error("No se encontró texto en la imagen. Intenta con otra imagen.")
+                else:
+                    # Crear descripción usando GPT
+                    prompt = (
+                        "Eres un lector experto de manga. Describe en español el texto extraído de la imagen "
+                        "de forma detallada. Incluye un análisis sobre cómo se relacionan los diálogos y el contexto. "
+                        "Diálogos en formato de guion, por ejemplo: (Panel 1, Juan ve a Pablo molesto y dice: '¡No me importa!')."
+                        f"\n\nTexto extraído de la imagen: {extracted_text}"
                     )
+                    if show_details and additional_details:
+                        prompt += f"\n\nDetalles adicionales proporcionados: {additional_details}"
 
-                # Extraer datos y descripción
-                image_url = response['data'][0]['url']
-                st.subheader("Imagen procesada:")
-                st.image(image_url, caption="Imagen generada/analizada por IA")
-
-                # Crear descripción usando GPT
-                prompt = (
-                    "Eres un lector experto de manga. Describe en español lo que ves en esta imagen de forma detallada. "
-                    "Incluye los diálogos en un formato de guion y analiza cada panel como si fueras un narrador de manga. "
-                    "Por ejemplo: (Panel 1 , el personaje Juan ve a Pablo molesto y dice -mal-)."
-                )
-                if show_details and additional_details:
-                    prompt += f"\n\nDetalles adicionales proporcionados: {additional_details}"
-
-                description_response = openai.ChatCompletion.create(
-                    model="gpt-4",
-                    messages=[
-                        {"role": "system", "content": "Eres un asistente experto en análisis de imágenes y narración de paneles de manga."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    max_tokens=500,
-                    temperature=0.7
-                )
-                description = description_response['choices'][0]['message']['content']
-                st.subheader("Descripción Generada:")
-                st.markdown(description)
+                    description_response = openai.ChatCompletion.create(
+                        model="gpt-4",
+                        messages=[
+                            {"role": "system", "content": "Eres un asistente experto en análisis de imágenes y narración de paneles de manga."},
+                            {"role": "user", "content": prompt}
+                        ],
+                        max_tokens=500,
+                        temperature=0.7
+                    )
+                    description = description_response['choices'][0]['message']['content']
+                    st.subheader("Descripción Generada:")
+                    st.markdown(description)
             except Exception as e:
                 st.error(f"Ocurrió un error: {e}")
 
