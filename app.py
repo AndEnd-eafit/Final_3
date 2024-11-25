@@ -46,27 +46,44 @@ if st.button("Analizar la imagen"):
         st.error("Por favor sube una imagen.")
     else:
         with st.spinner("Analizando la imagen..."):
-            # Crear el prompt de la solicitud
-            prompt = (
-                "Eres un lector experto de manga. Describe en español lo que ves en la imagen de forma detallada. "
-                "Incluye los diálogos en un formato de guion y analiza cada panel como si fueras un narrador de manga."
-                "El formato de guion sera dando de ejemplo (Panel 1 , el personaje juan ve a pablo molesto y dice -mal-)."
-            )
-            if show_details and additional_details:
-                prompt += f"\n\nDetalles adicionales proporcionados: {additional_details}"
-
-            # Solicitar la descripción a la API de OpenAI
             try:
-                response = openai.ChatCompletion.create(
+                # Leer la imagen cargada y enviarla como input
+                img_path = f"temp/{uploaded_file.name}"
+                with open(img_path, "wb") as f:
+                    f.write(uploaded_file.read())
+                
+                # Llamada a la API para análisis de imágenes
+                with open(img_path, "rb") as img:
+                    response = openai.Image.create_variation(
+                        image=img,
+                        n=1,
+                        size="256x256"
+                    )
+
+                # Extraer datos y descripción
+                image_url = response['data'][0]['url']
+                st.subheader("Imagen procesada:")
+                st.image(image_url, caption="Imagen generada/analizada por IA")
+
+                # Crear descripción usando GPT
+                prompt = (
+                    "Eres un lector experto de manga. Describe en español lo que ves en esta imagen de forma detallada. "
+                    "Incluye los diálogos en un formato de guion y analiza cada panel como si fueras un narrador de manga. "
+                    "Por ejemplo: (Panel 1 , el personaje Juan ve a Pablo molesto y dice -mal-)."
+                )
+                if show_details and additional_details:
+                    prompt += f"\n\nDetalles adicionales proporcionados: {additional_details}"
+
+                description_response = openai.ChatCompletion.create(
                     model="gpt-4",
                     messages=[
-                        {"role": "system", "content": "Eres un asistente experto en descripciones de imágenes y análisis de paneles de manga."},
+                        {"role": "system", "content": "Eres un asistente experto en análisis de imágenes y narración de paneles de manga."},
                         {"role": "user", "content": prompt}
                     ],
                     max_tokens=500,
                     temperature=0.7
                 )
-                description = response.choices[0].message['content']
+                description = description_response['choices'][0]['message']['content']
                 st.subheader("Descripción Generada:")
                 st.markdown(description)
             except Exception as e:
