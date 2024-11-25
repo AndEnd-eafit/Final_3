@@ -43,8 +43,9 @@ if uploaded_file:
 
         # Validar tamaño del Base64
         base64_length = len(img_str)
-        if base64_length > 30000:  # Si la codificación es muy grande, advertir al usuario
-            st.warning(f"La imagen codificada es demasiado grande ({base64_length} caracteres). Esto podría exceder el límite de la API.")
+        if base64_length > 30000:  # Límite de 30,000 caracteres
+            st.error(f"La imagen codificada supera el límite de 30,000 caracteres ({base64_length}). Por favor, reduce su resolución o usa otra imagen.")
+            img_str = None  # Reiniciar para evitar su envío
     except UnidentifiedImageError:
         st.error("El archivo subido no es una imagen válida. Por favor, sube un archivo de imagen compatible (JPG, PNG, JPEG).")
 
@@ -59,6 +60,8 @@ if st.button("Analizar la imagen"):
         st.error("Por favor ingresa tu API Key.")
     elif not uploaded_file:
         st.error("Por favor sube una imagen.")
+    elif not img_str:
+        st.error("No se puede procesar la imagen debido a su tamaño codificado en Base64.")
     else:
         with st.spinner("Analizando la imagen..."):
             try:
@@ -117,4 +120,3 @@ if st.button("Convertir a Audio"):
         st.markdown(get_binary_file_downloader_html(output_path, file_label="Archivo de audio"), unsafe_allow_html=True)
     else:
         st.error("No hay texto disponible para convertir a audio. Por favor, analiza una imagen primero.")
-
